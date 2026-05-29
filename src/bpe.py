@@ -37,13 +37,22 @@ class BPETokenizer:
         self.token_to_id = {}
         self.merges = []
 
+    # 파이썬 내장 클래스 bytes를 이용해 255개의 토큰을 미리 생성합니다.
     def _init_special_tokens(self):
         """
         TODO:
-        1. 특수 토큰 4개를 고정 ID 0~3에 등록합니다.
+        1. 특수 토큰 4개를 고정 ID 0~3에 등록합니다. 머야 위에 등록이 되어 있잖아? 
         2. byte 0~255를 ID 4~259에 bytes([byte_value]) 형태로 등록합니다.
         """
-        raise NotImplementedError("_init_special_tokens를 구현하세요.")
+        # 먼저 특수 토큰부터 등록합니다. 
+        for token, idx in SPECIAL_IDS.items() :
+            self.id_to_token[idx] = token
+            self.token_to_id[token] = idx
+        
+        #그 후 일반 토큰을 등록합니다.
+        for byte_value in range(256) :
+            self.id_to_token[byte_value + BYTE_OFFSET] = bytes([byte_value])
+            self.token_to_id[bytes([byte_value])] = byte_value + BYTE_OFFSET
 
     def get_pad_id(self):
         """padding 토큰 ID."""
@@ -64,14 +73,49 @@ class BPETokenizer:
     def train(self, corpus: str):
         """
         TODO: 코퍼스에서 BPE merge rule과 vocabulary를 학습합니다.
+        BPE merge rule은 자주 등장하는 토큰 쌍을 합쳐서 새 토큰으로 만드는 규칙을 말합니다.
 
         구현 힌트:
-        - `corpus.encode("utf-8")`로 byte ID 시퀀스를 만듭니다.
-        - 가장 자주 등장하는 이웃 token pair를 찾습니다.
-        - 새 token ID를 만들고, 시퀀스의 해당 pair를 새 ID로 치환합니다.
-        - `self.merges`, `self.id_to_token`, `self.token_to_id`를 갱신합니다.
+        - 1. `corpus.encode("utf-8")`로 byte ID 시퀀스를 만듭니다.
+        - 2. 가장 자주 등장하는 이웃 token pair를 찾습니다.
+        - 3. 새 token ID를 만들고, 시퀀스의 해당 pair를 새 ID로 치환합니다.
+        - 4. `self.merges`, `self.id_to_token`, `self.token_to_id`를 갱신합니다.
         """
-        raise NotImplementedError("BPETokenizer.train을 구현하세요.")
+        #1
+        token_ids = list(corpus.encode("utf-8"))
+
+        while (self.vocab_size - len(self.id_to_token) > 0 and len(token_ids) > 1 ) :
+
+            #2
+            token_pair = {}
+            for i in range(len(token_ids)-1) :            
+                if (token_ids[i], token_ids[i+1]) in token_pair :
+                    token_pair[(token_ids[i], token_ids[i+1])] += 1
+                else : 
+                    token_pair[(token_ids[i], token_ids[i+1])] = 1
+            best_pair = max(token_pair, key=lambda x: token_pair[x])
+
+            #3
+            new_id = len(self.id_to_token)
+            new_token_ids = []
+
+            i = 0
+            while i < len(token_ids) - 1 :
+                if (token_ids[i], token_ids[i+1]) == best_pair :
+                    new_token_ids.append(new_id)
+                    i += 2                    
+                else : 
+                    new_token_ids.append(token_ids[i])
+                    i += 1
+
+            token_ids = new_token_ids                    
+
+            #4 
+            self.merges.append(best_pair)
+            self.id_to_token[new_id] = best_pair
+            self.token_to_id[best_pair] = new_id
+            
+
 
     def save(self, path: str | Path):
         """
@@ -107,3 +151,10 @@ class BPETokenizer:
         - byte를 하나씩 decode하지 말고, 마지막에 `bytes(...).decode("utf-8")`를 한 번만 호출합니다.
         """
         raise NotImplementedError("BPETokenizer.decode를 구현하세요.")
+
+'''
+디버깅용 코드입니다. 구현이 끝나면 지워주세요.
+tokenizer = BPETokenizer()
+tokenizer._init_special_tokens()
+tokenizer.train("나는 밥을 먹었다 나는 밥을 먹었다")
+'''    
