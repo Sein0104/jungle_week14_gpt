@@ -8,6 +8,7 @@ UTF-8 byte-level BPE 토크나이저 과제 템플릿.
 """
 
 from pathlib import Path
+import json
 
 
 PAD_TOKEN = "<pad>"
@@ -123,7 +124,29 @@ class BPETokenizer:
 
         bytes와 tuple은 JSON에 바로 저장할 수 없으므로 type 정보를 함께 저장하세요.
         """
-        raise NotImplementedError("BPETokenizer.save를 구현하세요.")
+
+        serializable = {} 
+        for k, v in self.id_to_token.items():
+            if isinstance(v, bytes) :
+                serializable[k]=list(v)
+            elif isinstance(v, tuple):
+                serializable[k]= list(v)
+            else : 
+                serializable[k] = v
+
+
+        temp_merges = []
+        for k in self.merges :
+            temp_merges.append(list(k))
+
+        data = {
+            "merges" : temp_merges,
+            "id_to_token" : serializable
+        }
+        
+        with open(path, "w") as f :
+            json.dump(data, f, indent=4)
+
 
     def load(self, path: str | Path):
         """
@@ -152,9 +175,15 @@ class BPETokenizer:
         """
         raise NotImplementedError("BPETokenizer.decode를 구현하세요.")
 
-'''
-디버깅용 코드입니다. 구현이 끝나면 지워주세요.
-tokenizer = BPETokenizer()
-tokenizer._init_special_tokens()
-tokenizer.train("나는 밥을 먹었다 나는 밥을 먹었다")
-'''    
+# Smoke Test. 구현이 끝나면 지워주세요.
+if __name__ == "__main__" :
+    tokenizer = BPETokenizer(vocab_size=300)
+    tokenizer._init_special_tokens()
+
+    with open("data/ratings_train.txt", "r") as f:
+        corpus = f.read()
+    
+    tokenizer.train(corpus[:5000])
+    tokenizer.save("test.json")
+    print("vocab size:", len(tokenizer.id_to_token))
+    print("merges:", len(tokenizer.merges))
