@@ -156,6 +156,9 @@ class BPETokenizer:
             temp_merges = temp['merges']
             temp_id_to_token = temp['id_to_token']
         
+        for i in range(len(temp_merges)) :
+            self.merges[i] = tuple(temp_merges[i])
+        
         for i in range(len(temp_id_to_token)) :
             if type(temp_id_to_token[str(i)]) is str : # 특수토큰 (<unk> 등)인 경우
                 self.id_to_token[i] = temp_id_to_token[str(i)]
