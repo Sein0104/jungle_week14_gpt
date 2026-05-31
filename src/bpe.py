@@ -147,12 +147,25 @@ class BPETokenizer:
         with open(path, "w") as f :
             json.dump(data, f, indent=4)
 
-
     def load(self, path: str | Path):
         """
         TODO: save()로 저장한 JSON 파일을 읽어 vocabulary와 merge rule을 복원합니다.
         """
-        raise NotImplementedError("BPETokenizer.load를 구현하세요.")
+        with open(path, "r") as f :
+            temp = json.load(f)
+            temp_merges = temp['merges']
+            temp_id_to_token = temp['id_to_token']
+        
+        for i in range(len(temp_id_to_token)) :
+            if type(temp_id_to_token[str(i)]) is str : # 특수토큰 (<unk> 등)인 경우
+                self.id_to_token[i] = temp_id_to_token[str(i)]
+            elif type(temp_id_to_token[str(i)]) is list and len(temp_id_to_token[str(i)]) == 1 : #일반토큰 bytes인 경우
+                #TODO : temp_id_to_token을 bytes로 반환한 후, id_to_token을 수정합니다.
+                self.id_to_token[i] = bytes(temp_id_to_token[str(i)])
+            else : #merge 토큰일 경우 
+                #TODO : temp_id_to_token을 tuple로 변환한 후, id_to_token을 수정합니다.)
+                self.id_to_token[i] = tuple(temp_id_to_token[str(i)])
+
 
     def encode(self, text: str, add_bos_eos: bool = False) -> list[int]:
         """
@@ -175,7 +188,10 @@ class BPETokenizer:
         """
         raise NotImplementedError("BPETokenizer.decode를 구현하세요.")
 
-# Smoke Test. 구현이 끝나면 지워주세요.
+"""
+smoke Test
+TODO: 구현을 모두 완료하고 난 뒤엔 아래 코드를 지워 주세요!
+"""
 if __name__ == "__main__" :
     tokenizer = BPETokenizer(vocab_size=300)
     tokenizer._init_special_tokens()
@@ -185,5 +201,6 @@ if __name__ == "__main__" :
     
     tokenizer.train(corpus[:5000])
     tokenizer.save("test.json")
+    tokenizer.load("test.json")
     print("vocab size:", len(tokenizer.id_to_token))
     print("merges:", len(tokenizer.merges))
