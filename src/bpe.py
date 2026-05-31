@@ -179,7 +179,27 @@ class BPETokenizer:
         - train/load에서 얻은 merge rule을 학습 순서대로 적용합니다.
         - add_bos_eos=True이면 앞뒤에 bos/eos ID를 붙입니다.
         """
-        raise NotImplementedError("BPETokenizer.encode를 구현하세요.")
+        
+        token_ids = list(text.encode("utf-8"))
+
+        for merge in self.merges :
+            new_token_ids = []        
+            i = 0
+            while i < len(token_ids) - 1 : 
+                if (token_ids[i], token_ids[i+1]) == merge :
+                    new_token_ids.append(self.token_to_id[merge])
+                    i += 2
+                else :
+                    new_token_ids.append(token_ids[i])
+                    i += 1   
+                    
+            new_token_ids.append(token_ids[i])
+            token_ids = new_token_ids
+        
+        if add_bos_eos :
+            token_ids = [self.token_to_id[BOS_TOKEN]] + token_ids + [self.token_to_id[EOS_TOKEN]]
+        
+        return token_ids
 
     def decode(self, ids: list[int], skip_special: bool = True) -> str:
         """
@@ -207,3 +227,4 @@ if __name__ == "__main__" :
     tokenizer.load("test.json")
     print("vocab size:", len(tokenizer.id_to_token))
     print("merges:", len(tokenizer.merges))
+    print(tokenizer.encode("난 괴로워.. 네가 나 아니라 다른 사람에게만 웃고 사랑을 말하고 또 그렇게 미워해 날", add_bos_eos= True))
