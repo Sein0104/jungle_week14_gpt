@@ -192,7 +192,8 @@ class BPETokenizer:
                 else :
                     new_token_ids.append(token_ids[i])
                     i += 1   
-                    
+            
+            #현재 페어를 찾기 위해 len - 1까지만 반복하기 때문에, 마지막 원소를 따로 추가해주어야 합니다.
             new_token_ids.append(token_ids[i])
             token_ids = new_token_ids
         
@@ -209,22 +210,39 @@ class BPETokenizer:
         - merge token은 원본 byte token까지 재귀적으로 펼칩니다.
         - byte를 하나씩 decode하지 말고, 마지막에 `bytes(...).decode("utf-8")`를 한 번만 호출합니다.
         """
-        raise NotImplementedError("BPETokenizer.decode를 구현하세요.")
+        byte_tokens = []
+        result = []
+        
+        #재귀용 헬퍼 함수. 
+        def _flatten(ids, result) -> list[int] :
+            for token_id in ids :
+                if token_id >= 260 :
+                    _flatten(list(self.id_to_token[token_id]), result)
+                elif skip_special and token_id in (0, 1, 2, 3) :
+                    continue
+                else :
+                    result.append(token_id)
+            return result
 
-"""
-smoke Test
-TODO: 구현을 모두 완료하고 난 뒤엔 아래 코드를 지워 주세요!
-"""
-if __name__ == "__main__" :
-    tokenizer = BPETokenizer(vocab_size=300)
-    tokenizer._init_special_tokens()
+        # 
+        byte_tokens = _flatten(ids, result)
 
-    with open("data/ratings_train.txt", "r") as f:
-        corpus = f.read()
+        return bytes(result).decode("utf-8")
+        
+        
+        
+# """
+# smoke Test
+# TODO: 구현을 모두 완료하고 난 뒤엔 아래 코드를 지워 주세요!
+# """
+# if __name__ == "__main__" :
+#     tokenizer = BPETokenizer(vocab_size=300)
+#     tokenizer._init_special_tokens()
+
+#     with open("data/ratings_train.txt", "r") as f:
+#         corpus = f.read()
     
-    tokenizer.train(corpus[:5000])
-    tokenizer.save("test.json")
-    tokenizer.load("test.json")
-    print("vocab size:", len(tokenizer.id_to_token))
-    print("merges:", len(tokenizer.merges))
-    print(tokenizer.encode("난 괴로워.. 네가 나 아니라 다른 사람에게만 웃고 사랑을 말하고 또 그렇게 미워해 날", add_bos_eos= True))
+#     tokenizer.train(corpus[:5000])
+#     tokenizer.save("test.json")
+#     tokenizer.load("test.json")
+#     tokenizer.decode((tokenizer.encode("난 괴로워.. 네가 나 아니라 다른 사람에게만 웃고 사랑을 말하고 또 그렇게 미워해 날", add_bos_eos= True)))
