@@ -155,9 +155,9 @@ class BPETokenizer:
             temp = json.load(f)
             temp_merges = temp['merges']
             temp_id_to_token = temp['id_to_token']
-        
+                        
         for i in range(len(temp_merges)) :
-            self.merges[i] = tuple(temp_merges[i])
+            self.merges.append(tuple(temp_merges[i]))
         
         for i in range(len(temp_id_to_token)) :
             if type(temp_id_to_token[str(i)]) is str : # 특수토큰 (<unk> 등)인 경우
@@ -196,10 +196,10 @@ class BPETokenizer:
             #현재 페어를 찾기 위해 len - 1까지만 반복하기 때문에, 마지막 원소를 따로 추가해주어야 합니다.
             new_token_ids.append(token_ids[i])
             token_ids = new_token_ids
-        
+
         if add_bos_eos :
             token_ids = [self.token_to_id[BOS_TOKEN]] + token_ids + [self.token_to_id[EOS_TOKEN]]
-        
+
         return token_ids
 
     def decode(self, ids: list[int], skip_special: bool = True) -> str:
@@ -245,4 +245,4 @@ class BPETokenizer:
 #     tokenizer.train(corpus[:5000])
 #     tokenizer.save("test.json")
 #     tokenizer.load("test.json")
-#     tokenizer.decode((tokenizer.encode("난 괴로워.. 네가 나 아니라 다른 사람에게만 웃고 사랑을 말하고 또 그렇게 미워해 날", add_bos_eos= True)))
+#     print(tokenizer.decode(tokenizer.encode("난 괴로워.. 네가 나 아니라 다른 사람에게만 웃고 사랑을 말하고 또 그렇게 미워해 날", add_bos_eos= True)))
