@@ -37,6 +37,7 @@ class BPETokenizer:
         self.id_to_token = {}
         self.token_to_id = {}
         self.merges = []
+        self._init_special_tokens()
 
     # 파이썬 내장 클래스 bytes를 이용해 255개의 토큰을 미리 생성합니다.
     def _init_special_tokens(self):
@@ -109,14 +110,14 @@ class BPETokenizer:
                     new_token_ids.append(token_ids[i])
                     i += 1
 
-            token_ids = new_token_ids                    
+            token_ids = new_token_ids
 
             #4 
             self.merges.append(best_pair)
             self.id_to_token[new_id] = best_pair
+            print(self.id_to_token)
             self.token_to_id[best_pair] = new_id
             
-
 
     def save(self, path: str | Path):
         """
