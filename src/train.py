@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """GPT 사전 학습 유틸리티 과제 템플릿."""
 
+import time
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
@@ -47,6 +50,8 @@ def calc_loss_loader(
     model.eval()
     total_loss = 0.0
     max_batches = len(data_loader) if num_batches is None else min(num_batches, len(data_loader))
+    if max_batches == 0:
+        return float("nan")
 
     with torch.no_grad():
         for batch_idx, (input_batch, target_batch) in enumerate(data_loader):
@@ -147,7 +152,7 @@ def generate_and_print_sample(
     context_size: int = 256,
     temperature: float = 0.8,
     top_k: int | None = 40,
-) -> None:
+) -> str:
     """TODO: start_context를 encode하고 generate 후 decode하여 출력합니다."""
     model.eval()
     encoded = tokenizer.encode(start_context, add_bos_eos=False)
@@ -163,6 +168,7 @@ def generate_and_print_sample(
     )
     text = tokenizer.decode(out[0].tolist(), skip_special=True)
     print(text)
+    return text
 
 
 def train_model(
@@ -179,13 +185,25 @@ def train_model(
     ckpt_freq: int | None = None,
     start_epoch: int = 0,
     global_step: int = 0,
-) -> list[float]:
-    """TODO: 사전 학습 루프를 구현하고 epoch별 train loss 리스트를 반환합니다."""
+    ckpt_dir: str | Path = ".",
+) -> dict:
+    """TODO: 사전 학습 루프를 구현하고 epoch별 학습 기록을 반환합니다."""
     model.to(device)
-    train_losses = []
-    val_losses = []
+    history = {
+        "train_loss": [],
+        "val_loss": [],
+        "eval_step": [],
+        "eval_train_loss": [],
+        "eval_val_loss": [],
+        "learning_rate": [],
+        "epoch_time_sec": [],
+        "sample_text": [],
+        "global_step": [],
+        "checkpoint_path": [],
+    }
 
     for epoch in range(start_epoch, start_epoch + num_epochs):
+        epoch_start = time.time()
         model.train()
         for input_batch, target_batch in train_loader:
             optimizer.zero_grad()
@@ -198,40 +216,57 @@ def train_model(
                 train_loss = calc_loss_loader(train_loader, model, device, num_batches=eval_iter)
                 if val_loader is not None:
                     val_loss = calc_loss_loader(val_loader, model, device, num_batches=eval_iter)
+                    history["eval_val_loss"].append(val_loss)
                     print(
                         f"epoch {epoch + 1}, step {global_step}: "
                         f"train loss {train_loss:.4f}, val loss {val_loss:.4f}"
                     )
                 else:
+                    history["eval_val_loss"].append(None)
                     print(
                         f"epoch {epoch + 1}, step {global_step}: "
                         f"train loss {train_loss:.4f}"
                     )
+                history["eval_step"].append(global_step)
+                history["eval_train_loss"].append(train_loss)
+                history["learning_rate"].append(optimizer.param_groups[0]["lr"])
 
             if ckpt_freq is not None and ckpt_freq > 0 and global_step % ckpt_freq == 0:
+                ckpt_dir = Path(ckpt_dir)
+                ckpt_dir.mkdir(parents=True, exist_ok=True)
+                ckpt_path = str(ckpt_dir / f"checkpoint_step_{global_step}.pt")
                 save_checkpoint(
                     model=model,
                     optimizer=optimizer,
                     epoch=epoch,
                     global_step=global_step,
-                    path=f"checkpoint_step_{global_step}.pt",
+                    path=ckpt_path,
                 )
+                history["checkpoint_path"].append(ckpt_path)
 
         epoch_train_loss = calc_loss_loader(train_loader, model, device, num_batches=eval_iter)
-        train_losses.append(epoch_train_loss)
+        history["train_loss"].append(epoch_train_loss)
         if val_loader is not None:
-            val_losses.append(calc_loss_loader(val_loader, model, device, num_batches=eval_iter))
+            epoch_val_loss = calc_loss_loader(val_loader, model, device, num_batches=eval_iter)
+        else:
+            epoch_val_loss = None
+        history["val_loss"].append(epoch_val_loss)
+        history["epoch_time_sec"].append(time.time() - epoch_start)
+        history["global_step"].append(global_step)
 
         if tokenizer is not None and start_context:
-            generate_and_print_sample(
+            sample_text = generate_and_print_sample(
                 model=model,
                 tokenizer=tokenizer,
                 device=device,
                 start_context=start_context,
                 context_size=getattr(model, "config", {}).get("context_length", 256),
             )
+            history["sample_text"].append(sample_text)
+        else:
+            history["sample_text"].append(None)
 
-    return train_losses
+    return history
 
 
 def plot_losses(train_losses: list[float], val_losses: list[float] | None = None) -> None:
