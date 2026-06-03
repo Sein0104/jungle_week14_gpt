@@ -61,7 +61,6 @@ class InputEmbedding(nn.Module):
         Returns:
             (batch_size, seq_len, emb_dim)
         """
-        print(x)
         vetctor_sum = self.token_embedding(x) + self.position_embedding(torch.arange(x.shape[1]))
         
         return self.dropout(vetctor_sum)
