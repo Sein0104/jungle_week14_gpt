@@ -26,7 +26,6 @@
 
 ## 2. 테스트 통과 현황
 
-테스트는 로컬 `.venv` 환경에서 실행했다. 시스템 기본 `python3`에는 `torch`가 설치되어 있지 않아 테스트 수집 단계에서 실패할 수 있으므로, 아래 결과는 `.venv/bin/python` 기준이다.
 
 | 실행 명령 | 결과 | 비고 |
 | --- | --- | --- |
@@ -228,10 +227,6 @@
 
 ## 9. 고찰
 
-- 한국어 byte-level BPE는 UTF-8 byte를 기준으로 다뤄야 하므로, encode/decode 과정에서 byte 경계를 깨뜨리지 않는 것이 중요했다.
-- `context_length=128`은 영화 리뷰의 짧은 문맥을 학습하기에는 충분히 실험 가능한 크기였지만, 긴 문장 구조를 안정적으로 반영하기에는 한계가 있다.
-- Basic 사전 학습에서 train loss와 validation loss가 모두 감소했으므로 모델이 다음 token 예측 패턴을 학습하고 있음을 확인했다.
-- 후반부에는 train loss가 validation loss보다 더 많이 감소해 과적합 가능성이 보였다. `drop_rate` 증가, weight decay, learning rate decay, early stopping을 적용하면 개선 여지가 있다.
-- `n_heads=4`, `n_layers=2`, `emb_dim=128`은 빠른 실험에는 적절했지만 생성 문장의 의미 일관성은 아직 부족했다. 모델 용량을 키우거나 학습 corpus를 늘리는 실험이 필요하다.
-- 감성 분류 미세 조정은 사전 학습 checkpoint를 backbone으로 재사용하는 구조까지 준비했다. 최종 제출 전에는 전체 감성 분류 데이터로 실행해 validation/test accuracy를 기록해야 한다.
-- 다음 개선 방향은 BPE 학습 속도 최적화, cosine learning rate decay, gradient clipping, dropout/weight decay 비교 실험, 생성 샘플 정성 평가 자동화이다.
+- 이번 과정을 통해 테스트 코드가 통과했다고 해서 코드가 완성되었다고 볼 수는 없다는 점을 크게 느꼈다. 단위 테스트는 정해진 입력과 제한된 상황에서의 동작을 확인해 주지만, 실제 Colab 학습처럼 긴 데이터, GPU 환경, 저장/로드된 vocab, 반복 학습 루프가 결합된 상황까지 모두 보장하지는 않는다.
+- 실제로 BPE merge의 마지막 token 처리, position embedding의 device 처리처럼 실행 중에 오류가 난 부분들은 구현 당시에도 약간 의아했지만 시간에 쫓겨 넘어갔던 부분이었다. 겉으로는 테스트가 통과했더라도 코드 한 줄의 전제와 경계 조건을 끝까지 확인하지 않으면, 나중에 전체 학습 과정에서 반드시 문제로 드러날 수 있다는 것을 경험했다.
+- 따라서 앞으로는 테스트 통과를 최소 기준으로 보고, 각 함수가 어떤 입력 범위와 실행 환경을 가정하는지까지 확인해야 한다. 특히 tensor device, dtype, sequence length, 빈 데이터, 마지막 index 같은 경계 조건은 작은 코드에서는 사소해 보여도 프로젝트 전체에서는 학습 중단으로 이어질 수 있으므로, 코드 한 줄 한 줄에 책임감을 가지고 구현해야 한다.
