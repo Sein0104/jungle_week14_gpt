@@ -4,7 +4,13 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-
+"""
+해당 파일은 학습을 위해 데이터를 단위별로 잘라놓는 작업을 합니다.
+현재 Attention Mechanism을 사용하고 있기에,
+input을 [1,2,3], target을 [2,3,4]를 준다면
+1->2, 1,2->3, 1,2,3->4처럼 학습 3번을 한꺼번에 할 수 있습니다.
+즉, context_length의 길이만큼 횟수의 학습이 일어납니다 !!
+"""
 class GPTDataset(Dataset):
     """
     token ID 리스트를 다음 토큰 예측용 input/target 쌍으로 자릅니다.
@@ -17,38 +23,48 @@ class GPTDataset(Dataset):
     def __init__(
         self,
         token_ids: list[int],
-        context_length: int,
-        stride: int | None = None,
+        context_length: int, # 토큰 몇 개를 한 묶음으로 만들 것인가? 
+        stride: int | None = None, # 몇 칸씩 옆으로 갈 것인가? 
     ):
         self.token_ids = token_ids
         self.context_length = context_length
         self.stride = stride if stride is not None else context_length
         # TODO: 만들 수 있는 학습 샘플 개수를 self._length에 저장하세요.
-        raise NotImplementedError("GPTDataset.__init__에서 self._length를 구현하세요.")
+        self.length = (len(self.token_ids) - self.context_length - 1) // self.stride + 1
 
+
+        
     def __len__(self) -> int:
         """TODO: 전체 샘플 개수를 반환합니다."""
-        raise NotImplementedError("GPTDataset.__len__을 구현하세요.")
+        return self.length
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         """
         TODO: idx번째 input_ids와 target_ids를 LongTensor로 반환합니다.
-
+    
         Returns:
             input_ids: (context_length,)
             target_ids: (context_length,)
         """
-        raise NotImplementedError("GPTDataset.__getitem__을 구현하세요.")
+        input_ids = torch.tensor(self.token_ids[idx * self.stride: idx * self.stride+self.context_length])
+        # target은 input을 한 칸 시프트한 다음 토큰
+        target_ids = torch.tensor(self.token_ids[idx*self.stride+1:idx * self.stride+self.context_length+1])
+        
+        return (input_ids, target_ids)
+        
+        
 
 
 def create_dataloader(
     token_ids: list[int],
     context_length: int,
-    batch_size: int = 8,
+    batch_size: int = 8, #위에서 만든 튜플을 몇개씩 꺼내서 쓸 것인가?
     stride: int | None = None,
     drop_last: bool = False,
     shuffle: bool = True,
     num_workers: int = 0,
 ) -> DataLoader:
     """TODO: GPTDataset을 만들고 torch.utils.data.DataLoader로 감싸 반환합니다."""
-    raise NotImplementedError("create_dataloader를 구현하세요.")
+    ds = GPTDataset(token_ids, context_length, stride)
+    return torch.utils.data.DataLoader(ds, batch_size, shuffle, drop_last=drop_last, num_workers=num_workers)
+    
