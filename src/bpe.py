@@ -159,6 +159,10 @@ class BPETokenizer:
             temp_merges = temp['merges']
             temp_id_to_token = temp['id_to_token']
                         
+        self.merges = []
+        self.id_to_token = {}
+        self.token_to_id = {}
+
         for i in range(len(temp_merges)) :
             self.merges.append(tuple(temp_merges[i]))
         
@@ -171,6 +175,8 @@ class BPETokenizer:
             else : #merge 토큰일 경우 
                 #TODO : temp_id_to_token을 tuple로 변환한 후, id_to_token을 수정합니다.)
                 self.id_to_token[i] = tuple(temp_id_to_token[str(i)])
+
+            self.token_to_id[self.id_to_token[i]] = i
 
 
     def encode(self, text: str, add_bos_eos: bool = False) -> list[int]:
