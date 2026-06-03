@@ -83,12 +83,13 @@ class BPETokenizer:
         - 3. 새 token ID를 만들고, 시퀀스의 해당 pair를 새 ID로 치환합니다.
         - 4. `self.merges`, `self.id_to_token`, `self.token_to_id`를 갱신합니다.
         """
-        #1
+        #1. `corpus.encode("utf-8")`로 byte ID 시퀀스를 만듭니다.
         token_ids = list(corpus.encode("utf-8"))
 
         while (self.vocab_size - len(self.id_to_token) > 0 and len(token_ids) > 1 ) :
 
-            #2
+            #2. 가장 자주 등장하는 이웃 token pair를 찾습니다.
+            # while문 안에 있어야 하는 이유는, 이전 merge로 생성된 새 토큰이 다음 pair 후보가 될 수 있기 때문입니다.
             token_pair = {}
             for i in range(len(token_ids)-1) :            
                 if (token_ids[i], token_ids[i+1]) in token_pair :
@@ -97,7 +98,7 @@ class BPETokenizer:
                     token_pair[(token_ids[i], token_ids[i+1])] = 1
             best_pair = max(token_pair, key=lambda x: token_pair[x])
 
-            #3
+            #3. 새 token ID를 만들고, 시퀀스의 해당 pair를 새 ID로 치환합니다.
             new_id = len(self.id_to_token)
             new_token_ids = []
 
@@ -112,10 +113,9 @@ class BPETokenizer:
 
             token_ids = new_token_ids
 
-            #4 
+            #4. `self.merges`, `self.id_to_token`, `self.token_to_id`를 갱신합니다.
             self.merges.append(best_pair)
             self.id_to_token[new_id] = best_pair
-            print(self.id_to_token)
             self.token_to_id[best_pair] = new_id
             
 
