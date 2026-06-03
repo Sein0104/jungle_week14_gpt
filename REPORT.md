@@ -187,13 +187,29 @@
 | quick run train 샘플 | 5,000개 |
 | quick run validation 샘플 | 1,000개 |
 | quick run test 샘플 | 1,000개 |
-| validation loss / accuracy | Colab에서 fine-tuning 셀 실행 후 기입 |
-| test loss / accuracy | Colab에서 fine-tuning 셀 실행 후 기입 |
+| validation loss / accuracy | `drop_rate=0.0`은 validation loss 상승, validation accuracy 약 0.62 수준에서 정체 / `drop_rate=0.2`는 validation accuracy 약 0.75까지 상승 |
+| test loss / accuracy | `drop_rate=0.0`: loss 0.6474, accuracy 0.6240 / `drop_rate=0.2`: loss 0.5786, accuracy 0.6960 |
 | 저장 경로 | `outputs/pretrain_basic/best_sentiment_model.pt`, `outputs/pretrain_basic/finetune_history.json` |
 
 노트북 Step 6 아래에 감성 분류 fine-tuning 실행 셀과 loss/accuracy 그래프 셀을 추가했다. 처음 확인할 때는 작은 샘플 수로 빠르게 동작을 검증하고, 제출용 최종 실험에서는 `MAX_TRAIN_SAMPLES`, `MAX_VAL_SAMPLES`, `MAX_TEST_SAMPLES`를 `None`으로 바꿔 전체 데이터 기준 결과를 기록한다.
 
-오류 분석은 최종 미세 조정 실행 후 틀린 리뷰를 추출해 작성할 예정이다. 예상되는 오류 유형은 짧고 반어적인 리뷰, 긍정/부정 단어가 섞인 리뷰, 맥락 없이 별점 표현만 있는 리뷰이다.
+### 7.1 Dropout별 미세 조정 결과
+
+미세 조정에서는 `drop_rate=0.0`과 `drop_rate=0.2`를 비교했다. 두 설정 모두 같은 사전 학습 backbone 위에 감성 분류 head를 붙여 학습했으며, train/validation loss와 accuracy, test loss와 accuracy를 함께 확인했다.
+
+| drop_rate | train loss / accuracy | validation loss / accuracy | test 결과 | 해석 |
+| --- | --- | --- | --- | --- |
+| 0.0 | loss가 거의 0까지 감소, accuracy는 거의 1.0까지 상승 | loss가 크게 증가, accuracy는 약 0.62 부근에서 정체 | loss 0.6474, accuracy 0.6240 | 훈련 데이터에 강하게 과적합 |
+| 0.2 | loss가 완만하게 감소, accuracy는 약 0.84까지 상승 | loss는 비교적 낮은 범위에서 유지, accuracy는 약 0.75까지 상승 | loss 0.5786, accuracy 0.6960 | 일반화 성능이 더 안정적 |
+
+![Dropout별 감성 분류 미세 조정 비교](report_assets/finetune_dropout_comparison.png)
+
+`drop_rate=0.0`에서는 train loss가 빠르게 감소해 후반에는 거의 0에 가까워졌고, train accuracy도 거의 1.0까지 올라갔다. 하지만 validation loss는 epoch가 진행될수록 크게 증가했고, validation accuracy는 약 0.62 수준에서 거의 개선되지 않았다. 이는 모델이 훈련 데이터의 패턴을 외우는 데는 성공했지만, 검증 데이터에는 잘 일반화하지 못한 전형적인 과적합 신호로 해석할 수 있다.
+
+반면 `drop_rate=0.2`에서는 train loss가 더 천천히 감소하고 train accuracy도 과도하게 높아지지 않았다. 대신 validation accuracy가 꾸준히 상승해 약 0.75 수준까지 도달했고, test accuracy도 0.6960으로 `drop_rate=0.0`의 0.6240보다 높았다. validation loss는 중반 이후 조금 흔들리지만, `drop_rate=0.0`처럼 급격히 폭증하지 않는다. 따라서 감성 분류 미세 조정에서는 dropout을 적용한 설정이 과적합을 완화하고 실제 분류 성능을 높이는 데 더 효과적이었다.
+
+정리하면, 사전 학습에서 관찰한 dropout의 regularization 효과가 미세 조정에서도 다시 확인되었다. 특히 분류 데이터가 상대적으로 작을 때는 classifier가 train set을 빠르게 외울 수 있으므로, `drop_rate=0.2`처럼 dropout을 적용하거나 validation loss 기준 early stopping을 함께 사용하는 것이 더 적절하다.
+
 
 ---
 
