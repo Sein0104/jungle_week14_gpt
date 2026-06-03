@@ -150,7 +150,7 @@
 
 두 번째 가설은 다음과 같이 설정했다.
 
-> **context_length가 길어질수록 과적합이 더 쉽게 발생할 것이다.**
+> **context_length가 길어질수록, 학습 시퀀스를 통째로 외워버려서, 과적합이 발생할 것이다.**
 
 공통 조건은 `Basic`, `num_epochs=20`으로 두고, `context_length`만 `64`, `128`, `256`으로 바꾸어 비교했다. 과적합 여부는 train loss와 validation loss의 관계를 기준으로 판단했다. 일반적으로 과적합은 train loss가 계속 감소하는 동안 validation loss가 증가하거나 정체되고, train-validation gap이 커질 때 의심할 수 있다.
 
